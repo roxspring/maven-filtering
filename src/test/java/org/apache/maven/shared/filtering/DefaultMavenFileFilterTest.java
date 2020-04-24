@@ -24,7 +24,6 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Properties;
@@ -34,6 +33,8 @@ import org.apache.maven.shared.utils.io.FileUtils;
 import org.apache.maven.shared.utils.io.FileUtils.FilterWrapper;
 import org.apache.maven.shared.utils.io.IOUtil;
 import org.codehaus.plexus.PlexusTestCase;
+
+import static java.util.Collections.singletonList;
 
 /**
  * @author Olivier Lamy
@@ -77,6 +78,32 @@ public class DefaultMavenFileFilterTest
         Properties properties = PropertyUtils.loadPropertyFile( to, null );
         assertEquals( "${pom.version}", properties.getProperty( "version" ) );
 
+    }
+
+    public void testNotOverwriteFileWithFiltering()
+        throws Exception
+    {
+        MavenFileFilter mavenFileFilter = lookup( MavenFileFilter.class );
+
+        FilterWrapper filterWrapper = new FilterWrapper() {
+            @Override
+            public Reader getReader(Reader reader) {
+                return reader;
+            }
+        };
+
+        File from = new File( getBasedir(), "src/test/units-files/reflection-test.properties" );
+
+        mavenFileFilter.copyFile( from, to, true, singletonList(filterWrapper), "UTF-8" );
+
+        // very old file :-)
+        to.setLastModified( 1 );
+
+        long originalLastModified = to.lastModified();
+
+        mavenFileFilter.copyFile( from, to, true, singletonList(filterWrapper), "UTF-8" );
+
+        assertEquals(originalLastModified, to.lastModified());
     }
 
     public void testOverwriteFile()
@@ -140,10 +167,10 @@ public class DefaultMavenFileFilterTest
         MavenFileFilter mavenFileFilter = lookup( MavenFileFilter.class );
 
         AbstractMavenFilteringRequest req = new AbstractMavenFilteringRequest();
-        req.setFileFilters( Collections.singletonList( "src/main/filters/filefilter.properties" ) );
+        req.setFileFilters( singletonList( "src/main/filters/filefilter.properties" ) );
 
         MavenProject mavenProject = new StubMavenProject( new File( "src/test/units-files/MSHARED-161" ) );
-        mavenProject.getBuild().setFilters( Collections.singletonList( "src/main/filters/buildfilter.properties" ) );
+        mavenProject.getBuild().setFilters( singletonList( "src/main/filters/buildfilter.properties" ) );
         req.setMavenProject( mavenProject );
         req.setInjectProjectBuildFilters( true );
 

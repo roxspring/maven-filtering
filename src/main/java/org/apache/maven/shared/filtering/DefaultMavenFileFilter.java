@@ -136,14 +136,36 @@ public class DefaultMavenFileFilter
     {
         if ( wrappers != null && wrappers.size() > 0 )
         {
-            
-            
+            File tmp = new File( to.getPath() + ".tmp" );
+
+            if ( getLogger().isDebugEnabled() )
+            {
+                getLogger().debug( "writing to temporary file " + tmp.getPath() );
+            }
+
             try ( Reader fileReader = getFileReader( encoding, from );
-                  Writer fileWriter = getFileWriter( encoding, to ) )
+                  Writer fileWriter = getFileWriter( encoding, tmp ) )
             {
                 Reader src = readerFilter.filter( fileReader, true, wrappers );
 
                 IOUtil.copy( src, fileWriter );
+            }
+
+            if ( FileUtils.contentEquals( tmp, to ) )
+            {
+                if ( getLogger().isDebugEnabled() )
+                {
+                    getLogger().debug( "matching content, deleting " + tmp.getPath() );
+                }
+                FileUtils.delete( tmp );
+            }
+            else
+            {
+                if ( getLogger().isDebugEnabled() )
+                {
+                    getLogger().debug( "modified content, overwriting " + to.getPath() );
+                }
+                FileUtils.rename( tmp, to );
             }
         }
         else
